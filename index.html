@@ -35,15 +35,26 @@
                         console.log('NFC 讀取到:', message, serialNumber);
                         
                         let cardId = '';
-                        if (serialNumber) {
-                            cardId = serialNumber;
-                        } else if (message.records.length > 0) {
+                        let rawData = '';
+                        
+                        // 優先讀取卡片內容，而非序列號
+                        if (message.records && message.records.length > 0) {
                             const record = message.records[0];
-                            cardId = new TextDecoder().decode(record.data);
+                            rawData = new TextDecoder().decode(record.data);
+                            cardId = extractNumbers(rawData);
                         }
                         
-                        cardIdField.value = cardId;
-                        lookupEmployee(cardId);
+                        // 如果沒有內容，嘗試轉換序列號
+                        if (!cardId && serialNumber) {
+                            rawData = serialNumber;
+                            cardId = convertHexToDecimal(serialNumber);
+                        }
+                        
+                        console.log('原始資料:', rawData);
+                        console.log('處理後 ID:', cardId);
+                        
+                        cardIdField.value = cardId || rawData;
+                        lookupEmployee(cardId || rawData);
                     });
                     
                     ndef.addEventListener('readingerror', () => {
