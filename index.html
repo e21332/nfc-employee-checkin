@@ -22,31 +22,59 @@
         startBtn.addEventListener('click', async () => {
             if ('NDEFReader' in window) {
                 try {
+                    status.textContent = '正在啟動 NFC 讀取器...';
+                    
                     const ndef = new NDEFReader();
                     await ndef.scan();
                     
-                    status.textContent = '請將磁卡靠近手機...';
+                    status.textContent = '✅ NFC 已啟動，請將磁卡靠近手機背面...';
+                    startBtn.textContent = 'NFC 讀取中...';
+                    startBtn.disabled = true;
                     
-                    ndef.addEventListener('reading', ({ message }) => {
-                        const record = message.records[0];
-                        const cardId = new TextDecoder().decode(record.data);
+                    ndef.addEventListener('reading', ({ message, serialNumber }) => {
+                        console.log('NFC 讀取到:', message, serialNumber);
+                        
+                        let cardId = '';
+                        if (serialNumber) {
+                            cardId = serialNumber;
+                        } else if (message.records.length > 0) {
+                            const record = message.records[0];
+                            cardId = new TextDecoder().decode(record.data);
+                        }
                         
                         cardIdField.value = cardId;
                         lookupEmployee(cardId);
                     });
                     
+                    ndef.addEventListener('readingerror', () => {
+                        status.textContent = '❌ 讀取錯誤，請重新嘗試';
+                        resetButton();
+                    });
+                    
                 } catch (error) {
-                    status.textContent = '錯誤: ' + error.message;
+                    console.error('NFC 錯誤:', error);
+                    if (error.name === 'NotAllowedError') {
+                        status.textContent = '❌ 請允許 NFC 權限';
+                    } else if (error.name === 'NotSupportedError') {
+                        status.textContent = '❌ 設備不支援 NFC';
+                    } else {
+                        status.textContent = '❌ 錯誤: ' + error.message;
+                    }
+                    resetButton();
                 }
             } else {
-                status.textContent = '此瀏覽器不支援 NFC';
+                status.textContent = '❌ 此瀏覽器不支援 NFC，請使用 Chrome';
             }
         });
         
+        function resetButton() {
+            startBtn.textContent = '開始 NFC 讀取';
+            startBtn.disabled = false;
+        }
+        
         function lookupEmployee(cardId) {
-            // 這裡連接你的員工資料庫
-            // 可以是 Google Sheets API 或其他資料源
-            status.textContent = '讀取成功: ' + cardId;
+            status.textContent = '✅ 讀取成功: ' + cardId;
+            resetButton();
         }
     </script>
 </body>
