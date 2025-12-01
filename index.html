@@ -32,36 +32,33 @@
                     startBtn.disabled = true;
                     
                     ndef.addEventListener('reading', ({ message, serialNumber }) => {
-                        console.log('NFC 讀取到:', message, serialNumber);
+                        console.log('原始資料:', { message, serialNumber });
                         
                         let cardId = '';
                         
-                        // 先嘗試讀取序列號
+                        // 直接使用序列號
                         if (serialNumber) {
                             cardId = serialNumber;
                         }
                         
-                        // 如果有 NDEF 記錄，也嘗試讀取
+                        // 嘗試讀取 NDEF 資料
                         if (message && message.records && message.records.length > 0) {
-                            const record = message.records[0];
-                            const recordData = new TextDecoder().decode(record.data);
-                            console.log('記錄數據:', recordData);
-                            
-                            // 如果記錄有數據，優先使用記錄數據
-                            if (recordData && recordData.trim()) {
-                                cardId = recordData;
+                            try {
+                                const record = message.records[0];
+                                const recordData = new TextDecoder().decode(record.data);
+                                console.log('NDEF 資料:', recordData);
+                                if (recordData && recordData.trim()) {
+                                    cardId = recordData;
+                                }
+                            } catch (e) {
+                                console.log('NDEF 讀取錯誤:', e);
                             }
                         }
                         
-                        // 如果是 hex 格式 (如 c5:aa:53:48)，轉換為數字
-                        if (cardId.includes(':')) {
-                            const hexValue = cardId.replace(/:/g, '');
-                            const decimalValue = parseInt(hexValue, 16);
-                            cardId = decimalValue.toString();
-                        }
-                        
+                        console.log('最終卡號:', cardId);
                         cardIdField.value = cardId;
-                        lookupEmployee(cardId);
+                        status.textContent = '✅ 讀取成功: ' + cardId;
+                        resetButton();
                     });
                     
                     ndef.addEventListener('readingerror', () => {
@@ -89,32 +86,10 @@
             setTimeout(() => {
                 startBtn.textContent = '開始 NFC 讀取';
                 startBtn.disabled = false;
-            }, 3000); // 3秒後重置按鈕
+            }, 2000);
         }
         
-        function lookupEmployee(cardId) {
-            status.textContent = '✅ 讀取成功: ' + cardId;
-            
-            // 員工資料庫 (可以後續連接真正的資料庫)
-            const employees = {
-                '1213442757': '張三',
-                '3315925832': '李四', // c5aa5348 的十進制值
-                // 可以新增更多員工...
-            };
-            
-            const employeeName = employees[cardId];
-            const employeeField = document.getElementById('employeeName');
-            
-            if (employeeName) {
-                employeeField.value = employeeName;
-                status.textContent = '✅ 歡迎 ' + employeeName + ' (卡號: ' + cardId + ')';
-            } else {
-                employeeField.value = '未知員工';
-                status.textContent = '⚠️ 未找到員工資料 (卡號: ' + cardId + ')';
-            }
-            
-            resetButton();
-        }
+
     </script>
 </body>
 </html>
