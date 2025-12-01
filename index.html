@@ -55,10 +55,18 @@
                             }
                         }
                         
-                        console.log('最終卡號:', cardId);
-                        cardIdField.value = cardId;
-                        status.textContent = '✅ 讀取成功: ' + cardId;
-                        resetButton();
+                        // 如果是 UID 格式，轉換為 RFID 格式
+                        let rfidCode = '';
+                        if (cardId.includes(':')) {
+                            rfidCode = convertUidToRfidFormat(cardId);
+                            console.log('原始 UID:', cardId);
+                            console.log('轉換後 RFID:', rfidCode);
+                        } else {
+                            rfidCode = cardId;
+                        }
+                        
+                        cardIdField.value = rfidCode;
+                        lookupEmployee(rfidCode);
                     });
                     
                     ndef.addEventListener('readingerror', () => {
@@ -82,6 +90,51 @@
             }
         });
         
+        // UID 轉 RFID 格式函數
+        function convertUidToRfidFormat(uid) {
+            try {
+                // 移除冒號: "c5:aa:53:48" → "c5aa5348"
+                const cleanHex = uid.replace(/:/g, '');
+                
+                // 反序: "c5aa5348" → "4853aac5"
+                const reversedHex = cleanHex.match(/.{2}/g).reverse().join('');
+                
+                // 轉十進制: "4853aac5" → 1213442757
+                return parseInt(reversedHex, 16).toString();
+            } catch (error) {
+                console.error('轉換錯誤:', error);
+                return uid;
+            }
+        }
+        
+        // 查詢員工資料
+        async function lookupEmployee(rfidCode) {
+            try {
+                status.textContent = '正在查詢員工資料...';
+                
+                // 從 GitHub 讀取員工資料檔案
+                const response = await fetch('employees.json');
+                const employees = await response.json();
+                
+                const employee = employees[rfidCode];
+                const employeeField = document.getElementById('employeeName');
+                
+                if (employee) {
+                    employeeField.value = employee;
+                    status.textContent = '✅ 歡迎 ' + employee + ' (卡號: ' + rfidCode + ')';
+                } else {
+                    employeeField.value = '未知員工';
+                    status.textContent = '⚠️ 未找到員工資料 (卡號: ' + rfidCode + ')';
+                }
+            } catch (error) {
+                console.error('查詢員工錯誤:', error);
+                document.getElementById('employeeName').value = '查詢失敗';
+                status.textContent = '✅ 讀取成功: ' + rfidCode + ' (無法連接資料庫)';
+            }
+            
+            resetButton();
+        }
+        
         function resetButton() {
             setTimeout(() => {
                 startBtn.textContent = '開始 NFC 讀取';
@@ -89,7 +142,6 @@
             }, 2000);
         }
         
-
     </script>
 </body>
 </html>
