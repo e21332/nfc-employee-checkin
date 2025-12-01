@@ -122,6 +122,9 @@
                 if (employee) {
                     employeeField.value = employee;
                     status.textContent = '✅ 歡迎 ' + employee + ' (卡號: ' + rfidCode + ')';
+                    
+                    // 成功找到員工，自動記錄報到
+                    await recordAttendance(rfidCode, employee);
                 } else {
                     employeeField.value = '未知員工';
                     status.textContent = '⚠️ 未找到員工資料 (卡號: ' + rfidCode + ')';
@@ -135,11 +138,52 @@
             resetButton();
         }
         
+        // 記錄報到到 Google Sheets
+        async function recordAttendance(cardId, employeeName) {
+            try {
+                status.textContent = '正在記錄報到...';
+                
+                const timestamp = formatDateTime(new Date());
+                
+                const response = await fetch('https://script.google.com/macros/s/AKfycbxM2qauk-R-jabd4T9ce_Tw-S54aYLOjzOcZtHUU8Oh9kHmJ9SU7yT2o2xwPJrVZA2xPg/exec', {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        sheetName: 'NFC報到',
+                        cardId: cardId,
+                        employeeName: employeeName,
+                        timestamp: timestamp
+                    })
+                });
+                
+                status.textContent = '✅ ' + employeeName + ' 報到成功! (' + timestamp + ')';
+                
+            } catch (error) {
+                console.error('報到記錄錯誤:', error);
+                status.textContent = '✅ ' + employeeName + ' 識別成功，但報到記錄失敗';
+            }
+        }
+        
+        // 格式化日期時間為 YYYY/MM/DD HH:MM:SS
+        function formatDateTime(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            
+            return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+        }
+        
         function resetButton() {
             setTimeout(() => {
                 startBtn.textContent = '開始 NFC 讀取';
                 startBtn.disabled = false;
-            }, 2000);
+            }, 3000); // 增加到 3 秒，讓使用者看到報到結果
         }
         
     </script>
