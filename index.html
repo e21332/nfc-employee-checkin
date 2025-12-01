@@ -79,12 +79,49 @@
         });
         
         function resetButton() {
-            startBtn.textContent = '開始 NFC 讀取';
-            startBtn.disabled = false;
+            setTimeout(() => {
+                startBtn.textContent = '開始 NFC 讀取';
+                startBtn.disabled = false;
+            }, 2000); // 2秒後重置按鈕
+        }
+        
+        // 提取數字部分
+        function extractNumbers(text) {
+            const numbers = text.match(/\d+/g);
+            return numbers ? numbers.join('') : '';
+        }
+        
+        // 將 16 進制轉為 10 進制
+        function convertHexToDecimal(hexString) {
+            // 移除冒號和空格
+            const cleanHex = hexString.replace(/[:\s-]/g, '');
+            try {
+                return parseInt(cleanHex, 16).toString();
+            } catch (e) {
+                return hexString;
+            }
         }
         
         function lookupEmployee(cardId) {
             status.textContent = '✅ 讀取成功: ' + cardId;
+            
+            // 這裡可以連接員工資料庫
+            // 例如：
+            const employees = {
+                '1213442757': '張三',
+                '1234567890': '李四',
+                // 新增更多員工...
+            };
+            
+            const employeeName = employees[cardId];
+            if (employeeName) {
+                document.getElementById('employeeName').value = employeeName;
+                status.textContent = '✅ 歡迎 ' + employeeName + ' (卡號: ' + cardId + ')';
+            } else {
+                document.getElementById('employeeName').value = '未知員工';
+                status.textContent = '⚠️ 未找到員工資料 (卡號: ' + cardId + ')';
+            }
+            
             resetButton();
         }
     </script>
