@@ -1,37 +1,383 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NFC 磁卡讀取</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#2196F3">
+    <title>NFC 員工報到系統</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px 30px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            animation: slideUp 0.6s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .header {
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .header .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .nfc-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #2196F3, #21CBF3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 36px;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .start-btn {
+            background: linear-gradient(135deg, #2196F3, #21CBF3);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 16px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            min-width: 200px;
+        }
+        
+        .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(33, 150, 243, 0.3);
+        }
+        
+        .start-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .status {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 16px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #555;
+            border-left: 4px solid #2196F3;
+            text-align: left;
+        }
+        
+        .status.success {
+            background: #e8f5e8;
+            border-left-color: #4CAF50;
+            color: #2e7d32;
+        }
+        
+        .status.error {
+            background: #ffeaea;
+            border-left-color: #f44336;
+            color: #c62828;
+        }
+        
+        .status.warning {
+            background: #fff3e0;
+            border-left-color: #ff9800;
+            color: #ef6c00;
+        }
+        
+        .input-group {
+            margin: 15px 0;
+            text-align: left;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            background: #f8f9fa;
+            color: #333;
+            transition: all 0.3s ease;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #2196F3;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+        }
+        
+        .input-field.success {
+            border-color: #4CAF50;
+            background: #e8f5e8;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #999;
+            font-size: 12px;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #2196F3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .attendance-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .attendance-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .attendance-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .clear-btn {
+            background: #ff5722;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .clear-btn:hover {
+            background: #e64a19;
+            transform: translateY(-1px);
+        }
+        
+        .attendance-list {
+            max-height: 200px;
+            overflow-y: auto;
+            text-align: left;
+        }
+        
+        .attendance-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-left: 3px solid #4CAF50;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .attendance-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .attendance-time {
+            color: #666;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        
+        .no-records {
+            text-align: center;
+            color: #999;
+            font-size: 14px;
+            padding: 20px;
+            font-style: italic;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+            
+            .header h1 {
+                font-size: 20px;
+            }
+            
+            .nfc-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 28px;
+            }
+            
+            .attendance-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h2>員工報到系統</h2>
-    
-    <button id="startNFC">開始 NFC 讀取</button>
-    <div id="status">請點擊開始讀取</div>
-    
-    <input type="text" id="cardId" placeholder="磁卡內碼" readonly>
-    <input type="text" id="employeeName" placeholder="員工姓名" readonly>
+    <div class="container">
+        <div class="header">
+            <div class="nfc-icon">📱</div>
+            <h1>員工報到系統</h1>
+            <div class="subtitle">請使用 NFC 卡片進行報到</div>
+        </div>
+        
+        <button id="startNFC" class="start-btn">🚀 開始 NFC 讀取</button>
+        
+        <div id="status" class="status">請點擊上方按鈕開始讀取</div>
+        
+        <div class="input-group">
+            <label for="cardId">📋 磁卡內碼</label>
+            <input type="text" id="cardId" class="input-field" placeholder="等待讀取..." readonly>
+        </div>
+        
+        <div class="input-group">
+            <label for="employeeName">👤 員工姓名</label>
+            <input type="text" id="employeeName" class="input-field" placeholder="等待識別..." readonly>
+        </div>
+        
+        <div class="attendance-section">
+            <div class="attendance-header">
+                <div class="attendance-title">📋 今日報到記錄</div>
+                <button id="clearRecords" class="clear-btn">🗑️ 清空</button>
+            </div>
+            <div id="attendanceList" class="attendance-list">
+                <div class="no-records">尚無報到記錄</div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            💡 請確保手機已開啟 NFC 功能<br>
+            🌐 建議使用 Chrome 瀏覽器
+        </div>
+    </div>
     
     <script>
         const startBtn = document.getElementById('startNFC');
         const status = document.getElementById('status');
         const cardIdField = document.getElementById('cardId');
+        const employeeField = document.getElementById('employeeName');
+        const attendanceList = document.getElementById('attendanceList');
+        const clearRecordsBtn = document.getElementById('clearRecords');
+        
+        // 全域變數
+        let attendanceRecords = [];
+        let nfcReader = null;
+        let autoStopTimer = null;
+        let isNfcActive = false;
+        
+        // 清空記錄按鈕事件
+        clearRecordsBtn.addEventListener('click', () => {
+            attendanceRecords = [];
+            updateAttendanceDisplay();
+        });
         
         startBtn.addEventListener('click', async () => {
+            // 如果已經在感應中，不重複啟動
+            if (isNfcActive) return;
             if ('NDEFReader' in window) {
                 try {
-                    status.textContent = '正在啟動 NFC 讀取器...';
+                    updateStatus('🔄 正在啟動 NFC 讀取器...', 'info');
                     
-                    const ndef = new NDEFReader();
-                    await ndef.scan();
+                    nfcReader = new NDEFReader();
+                    await nfcReader.scan();
                     
-                    status.textContent = '✅ NFC 已啟動，請將磁卡靠近手機背面...';
-                    startBtn.textContent = 'NFC 讀取中...';
+                    isNfcActive = true;
+                    updateStatus('✅ NFC 已啟動，請將磁卡靠近手機背面...', 'success');
+                    startBtn.innerHTML = '<span class="loading"></span>NFC 讀取中...';
                     startBtn.disabled = true;
                     
-                    ndef.addEventListener('reading', ({ message, serialNumber }) => {
+                    // 設定 10 秒自動停止
+                    startAutoStopTimer();
+                    
+                    nfcReader.addEventListener('reading', ({ message, serialNumber }) => {
                         console.log('原始資料:', { message, serialNumber });
                         
                         let cardId = '';
@@ -69,24 +415,24 @@
                         lookupEmployee(rfidCode);
                     });
                     
-                    ndef.addEventListener('readingerror', () => {
-                        status.textContent = '❌ 讀取錯誤，請重新嘗試';
-                        resetButton();
+                    nfcReader.addEventListener('readingerror', () => {
+                        updateStatus('❌ 讀取錯誤，請重新嘗試', 'error');
+                        stopNfcReading();
                     });
                     
                 } catch (error) {
                     console.error('NFC 錯誤:', error);
                     if (error.name === 'NotAllowedError') {
-                        status.textContent = '❌ 請允許 NFC 權限';
+                        updateStatus('❌ 請允許 NFC 權限，然後重新嘗試', 'error');
                     } else if (error.name === 'NotSupportedError') {
-                        status.textContent = '❌ 設備不支援 NFC';
+                        updateStatus('❌ 設備不支援 NFC，請更換裝置', 'error');
                     } else {
-                        status.textContent = '❌ 錯誤: ' + error.message;
+                        updateStatus('❌ 錯誤: ' + error.message, 'error');
                     }
-                    resetButton();
+                    stopNfcReading();
                 }
             } else {
-                status.textContent = '❌ 此瀏覽器不支援 NFC，請使用 Chrome';
+                updateStatus('❌ 此瀏覽器不支援 NFC，請使用 Chrome', 'error');
             }
         });
         
@@ -107,41 +453,45 @@
             }
         }
         
+        // 更新狀態顯示
+        function updateStatus(message, type = 'info') {
+            status.textContent = message;
+            status.className = 'status ' + type;
+        }
+        
         // 查詢員工資料
         async function lookupEmployee(rfidCode) {
             try {
-                status.textContent = '正在查詢員工資料...';
+                updateStatus('🔍 正在查詢員工資料...', 'info');
                 
                 // 從 GitHub 讀取員工資料檔案
                 const response = await fetch('employees.json');
                 const employees = await response.json();
                 
                 const employee = employees[rfidCode];
-                const employeeField = document.getElementById('employeeName');
                 
                 if (employee) {
                     employeeField.value = employee;
-                    status.textContent = '✅ 歡迎 ' + employee + ' (卡號: ' + rfidCode + ')';
+                    employeeField.classList.add('success');
+                    updateStatus('🎉 歡迎 ' + employee + '!', 'success');
                     
                     // 成功找到員工，自動記錄報到
                     await recordAttendance(rfidCode, employee);
                 } else {
                     employeeField.value = '未知員工';
-                    status.textContent = '⚠️ 未找到員工資料 (卡號: ' + rfidCode + ')';
+                    updateStatus('⚠️ 未找到員工資料 (卡號: ' + rfidCode + ')', 'warning');
                 }
             } catch (error) {
                 console.error('查詢員工錯誤:', error);
-                document.getElementById('employeeName').value = '查詢失敗';
-                status.textContent = '✅ 讀取成功: ' + rfidCode + ' (無法連接資料庫)';
+                employeeField.value = '查詢失敗';
+                updateStatus('✅ 讀取成功: ' + rfidCode + ' (無法連接資料庫)', 'warning');
             }
-            
-            resetButton();
         }
         
         // 記錄報到到 Google Sheets
         async function recordAttendance(cardId, employeeName) {
             try {
-                status.textContent = '正在記錄報到...';
+                updateStatus('📝 正在記錄報到...', 'info');
                 
                 const timestamp = formatDateTime(new Date());
                 
@@ -159,11 +509,18 @@
                     })
                 });
                 
-                status.textContent = '✅ ' + employeeName + ' 報到成功! (' + timestamp + ')';
+                updateStatus('✅ ' + employeeName + ' 報到成功! (' + timestamp + ')', 'success');
+                
+                // 報到成功後的處理
+                addAttendanceRecord(employeeName, timestamp);
+                clearInputFields();
+                resetAutoStopTimer(); // 重新計時 10 秒
                 
             } catch (error) {
                 console.error('報到記錄錯誤:', error);
-                status.textContent = '✅ ' + employeeName + ' 識別成功，但報到記錄失敗';
+                updateStatus('✅ ' + employeeName + ' 識別成功，但報到記錄失敗', 'warning');
+                clearInputFields();
+                resetAutoStopTimer(); // 重新計時 10 秒
             }
         }
         
@@ -179,11 +536,62 @@
             return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
         }
         
-        function resetButton() {
+        // 清空輸入欄位
+        function clearInputFields() {
             setTimeout(() => {
-                startBtn.textContent = '開始 NFC 讀取';
-                startBtn.disabled = false;
-            }, 3000); // 增加到 3 秒，讓使用者看到報到結果
+                cardIdField.value = '';
+                employeeField.value = '';
+                cardIdField.classList.remove('success');
+                employeeField.classList.remove('success');
+            }, 2000); // 2 秒後清空
+        }
+        
+        // 新增報到記錄
+        function addAttendanceRecord(name, time) {
+            const record = { name, time, id: Date.now() };
+            attendanceRecords.unshift(record); // 新的在前面
+            updateAttendanceDisplay();
+        }
+        
+        // 更新報到記錄顯示
+        function updateAttendanceDisplay() {
+            if (attendanceRecords.length === 0) {
+                attendanceList.innerHTML = '<div class="no-records">尚無報到記錄</div>';
+                return;
+            }
+            
+            const html = attendanceRecords.map(record => `
+                <div class="attendance-item">
+                    <div class="attendance-name">👤 ${record.name}</div>
+                    <div class="attendance-time">🕰️ ${record.time}</div>
+                </div>
+            `).join('');
+            
+            attendanceList.innerHTML = html;
+        }
+        
+        // 開始自動停止計時器
+        function startAutoStopTimer() {
+            clearTimeout(autoStopTimer);
+            autoStopTimer = setTimeout(() => {
+                updateStatus('⏰ 10 秒已到，請重新按下「開始 NFC 讀取」', 'warning');
+                stopNfcReading();
+            }, 10000); // 10 秒
+        }
+        
+        // 重新計時
+        function resetAutoStopTimer() {
+            if (isNfcActive) {
+                startAutoStopTimer();
+            }
+        }
+        
+        // 停止 NFC 讀取
+        function stopNfcReading() {
+            isNfcActive = false;
+            clearTimeout(autoStopTimer);
+            startBtn.innerHTML = '🚀 開始 NFC 讀取';
+            startBtn.disabled = false;
         }
         
     </script>
