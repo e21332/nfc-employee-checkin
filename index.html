@@ -440,7 +440,8 @@
                             rfidCode = cardId;
                         }
                         
-                        cardIdField.value = rfidCode;
+                        // 顯示遮蔽的卡號，但傳遞真實卡號
+                        cardIdField.value = maskCardId(rfidCode);
                         lookupEmployee(rfidCode);
                     });
                     
@@ -464,6 +465,13 @@
                 updateStatus('❌ 此瀏覽器不支援 NFC，請使用 Chrome', 'error');
             }
         });
+        
+        // 遮蔽卡號顯示
+        function maskCardId(cardId) {
+            if (!cardId) return '';
+            // 將所有字元轉換為 *
+            return '*'.repeat(cardId.length);
+        }
         
         // UID 轉 RFID 格式函數
         function convertUidToRfidFormat(uid) {
