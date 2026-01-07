@@ -352,6 +352,9 @@
         let nfcReader = null;
         let autoStopTimer = null;
         let isNfcActive = false;
+        let lastCardId = '';
+        let lastReadTime = 0;
+        const DUPLICATE_INTERVAL = 5000; // 5秒內視為重複讀取
         const API_URL = 'https://script.google.com/macros/s/AKfycbyda7HqQRLE_G2mlIqc5qZE7FPoDPx7D3jinnNl46EQKE6b93nrqFPSXVeUNy5AhOLhPA/exec';
         
         // 頁面載入時讀取統計
@@ -440,6 +443,18 @@
                             rfidCode = cardId;
                         }
                         
+                        // 檢查是否為重複讀取
+                        const currentTime = Date.now();
+                        if (rfidCode === lastCardId && (currentTime - lastReadTime) < DUPLICATE_INTERVAL) {
+                            console.log('忽略重複讀取:', rfidCode);
+                            updateStatus('⚠️ 同一張卡片，請稍後再試', 'warning');
+                            return;
+                        }
+                        
+                        // 更新最後讀取記錄
+                        lastCardId = rfidCode;
+                        lastReadTime = currentTime;
+                        
                         // 顯示遮蔽的卡號，但傳遞真實卡號
                         cardIdField.value = maskCardId(rfidCode);
                         lookupEmployee(rfidCode);
@@ -469,20 +484,14 @@
         // 遮蔽卡號顯示
         function maskCardId(cardId) {
             if (!cardId) return '';
-            // 將所有字元轉換為 *
             return '*'.repeat(cardId.length);
         }
         
         // UID 轉 RFID 格式函數
         function convertUidToRfidFormat(uid) {
             try {
-                // 移除冒號: "c5:aa:53:48" → "c5aa5348"
                 const cleanHex = uid.replace(/:/g, '');
-                
-                // 反序: "c5aa5348" → "4853aac5"
                 const reversedHex = cleanHex.match(/.{2}/g).reverse().join('');
-                
-                // 轉十進制: "4853aac5" → 1213442757
                 return parseInt(reversedHex, 16).toString();
             } catch (error) {
                 console.error('轉換錯誤:', error);
@@ -500,19 +509,14 @@
         async function lookupEmployee(rfidCode) {
             try {
                 updateStatus('🔍 正在查詢員工資料...', 'info');
-                
-                // 從 GitHub 讀取員工資料檔案
                 const response = await fetch('employees.json');
                 const employees = await response.json();
-                
                 const employee = employees[rfidCode];
                 
                 if (employee) {
                     employeeField.value = employee;
                     employeeField.classList.add('success');
                     updateStatus('🎉 歡迎 ' + employee + '!', 'success');
-                    
-                    // 成功找到員工，自動記錄報到
                     await recordAttendance(rfidCode, employee);
                 } else {
                     employeeField.value = '未知員工';
@@ -525,19 +529,16 @@
             }
         }
         
-        // 記錄報到到 Google Sheets
+        // 記錄報到
         async function recordAttendance(cardId, employeeName) {
             try {
                 updateStatus('📝 正在記錄報到...', 'info');
-                
                 const timestamp = formatDateTime(new Date());
                 
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     mode: 'no-cors',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         sheetName: 'NFC報到',
                         cardId: cardId,
@@ -547,24 +548,20 @@
                 });
                 
                 updateStatus('✅ ' + employeeName + ' 報到成功! (' + timestamp + ')', 'success');
-                
-                // 報到成功後的處理
                 addAttendanceRecord(employeeName, timestamp);
                 clearInputFields();
-                resetAutoStopTimer(); // 重新計時 10 秒
-                
-                // 更新統計數字
-                setTimeout(() => fetchTotalCount(), 1000); // 1秒後更新統計
+                resetAutoStopTimer();
+                setTimeout(() => fetchTotalCount(), 1000);
                 
             } catch (error) {
                 console.error('報到記錄錯誤:', error);
                 updateStatus('✅ ' + employeeName + ' 識別成功，但報到記錄失敗', 'warning');
                 clearInputFields();
-                resetAutoStopTimer(); // 重新計時 10 秒
+                resetAutoStopTimer();
             }
         }
         
-        // 格式化日期時間為 YYYY/MM/DD HH:MM:SS
+        // 格式化日期時間
         function formatDateTime(date) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -572,7 +569,6 @@
             const hours = String(date.getHours()).padStart(2, '0');
             const minutes = String(date.getMinutes()).padStart(2, '0');
             const seconds = String(date.getSeconds()).padStart(2, '0');
-            
             return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
         }
         
@@ -583,13 +579,13 @@
                 employeeField.value = '';
                 cardIdField.classList.remove('success');
                 employeeField.classList.remove('success');
-            }, 2000); // 2 秒後清空
+            }, 2000);
         }
         
         // 新增報到記錄
         function addAttendanceRecord(name, time) {
             const record = { name, time, id: Date.now() };
-            attendanceRecords.unshift(record); // 新的在前面
+            attendanceRecords.unshift(record);
             updateAttendanceDisplay();
         }
         
@@ -616,7 +612,7 @@
             autoStopTimer = setTimeout(() => {
                 updateStatus('⏰ 10 秒已到，請重新按下「開始 NFC 讀取」', 'warning');
                 stopNfcReading();
-            }, 10000); // 10 秒
+            }, 10000);
         }
         
         // 重新計時
@@ -632,6 +628,9 @@
             clearTimeout(autoStopTimer);
             startBtn.innerHTML = '🚀 開始 NFC 讀取';
             startBtn.disabled = false;
+            // 清除重複檢測記錄
+            lastCardId = '';
+            lastReadTime = 0;
         }
         
     </script>
